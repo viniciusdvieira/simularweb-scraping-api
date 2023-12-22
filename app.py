@@ -43,22 +43,60 @@ if rank_elements:
 else:
     print("Não teve mudanca de rank.")
 
+
+#Total de Visitas
+total_elements = driver.find_elements(By.XPATH, "//p[@class='engagement-list__item-value']")
+total_element = total_elements[0]
+total_text = total_element.text
+print("Total de Visitas:", total_text)
+
 #Duração Média da Visita
 duracao_elements = driver.find_elements(By.XPATH, "//p[@class='engagement-list__item-value']")
 duracao_element = duracao_elements[3]
 duracao_text = duracao_element.text
-print("Duração Média da Visita: ", duracao_text)
+print("Duração Média da Visita:", duracao_text)
 
 #Páginas por Visita
 pagina_elements = driver.find_elements(By.XPATH, "//p[@class='engagement-list__item-value']")
 pagina_element = pagina_elements[2]
 pagina_text = pagina_element.text
-print("Páginas por Visita: ", pagina_text)
+print("Páginas por Visita:", pagina_text)
 
 #Taxa de Rejeição
 taxa_elements = driver.find_elements(By.XPATH, "//p[@class='engagement-list__item-value']")
 taxa_element = taxa_elements[1]
 taxa_text = taxa_element.text
-print("Taxa de Rejeição: ", taxa_text)
+print("Taxa de Rejeição:", taxa_text)
+
+#Principais Países
+paises_elements = driver.find_elements(By.XPATH, "//a[@class='wa-geography__country-name']")
+paises_text = [element.text for element in paises_elements]
+porcentagem_pais_elements = driver.find_elements(By.XPATH, "//span[@class='wa-geography__country-traffic-value']")
+porcentagem_pais_text = [element2.text for element2 in porcentagem_pais_elements]
+print("Principais países:", ", ".join([f"{pais} = {porcentagem}" for pais, porcentagem in zip(paises_text[:7], porcentagem_pais_text[:6])]))
+
+
+#Distribuição por Gênero 
+genero_feminino_element = driver.find_element(By.XPATH, "//li[@class='wa-demographics__gender-legend-item wa-demographics__gender-legend-item--female']")
+genero_feminino_text = genero_feminino_element.text
+genero_masculino_element = driver.find_element(By.XPATH, "//li[@class='wa-demographics__gender-legend-item wa-demographics__gender-legend-item--male']")
+genero_masculino_text = genero_masculino_element.text
+print(f"Distribuição por Gênero: Feminino = {genero_feminino_text.split()[1]}, Masculino = {genero_masculino_text.split()[1]}")
+
+#Distribuição por idade
+script = """
+var elements = document.querySelectorAll('tspan.wa-demographics__age-data-label');
+var textArray = [];
+elements.forEach(function(element) {
+    textArray.push(element.textContent);
+});
+return textArray;
+"""
+porcentagem_idade_text = driver.execute_script(script)
+faixas_etarias = ["18 - 24", "25 - 34", "35 - 44", "45 - 54", "55 - 64", "65+"]
+print("Distribuição por idade: " + " ".join([f"({faixa}={porcentagem})" for faixa, porcentagem in zip(faixas_etarias, porcentagem_idade_text)]))
+
+
 
 driver.quit()
+
