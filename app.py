@@ -2,6 +2,12 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from time import sleep
 import re
+from pymongo import MongoClient
+
+# Conectar ao MongoDB
+cliente = MongoClient('mongodb://localhost:27017/')
+banco_dados = cliente['dados_similarweb']
+colecao = banco_dados['dados_website']
 
 
 driver = webdriver.Chrome()
@@ -25,11 +31,11 @@ categoria_text = categoria_element.text
 categoria_text_sem_parenteses = re.sub(r'\([^)]*\)', '', categoria_text)
 print("Categoria:", categoria_text_sem_parenteses.strip())
 
-#Mudança de Ranking
+# Mudança de Ranking
 rank_elements = driver.find_elements(By.XPATH, "//span[@class='app-parameter-change app-parameter-change--md app-parameter-change--down']")
+rank_directions = []
+rank_texts = []
 if rank_elements:
-    rank_texts = []
-    rank_directions = []
     for rank_element in rank_elements:
         rank_text = rank_element.text
         if 'M2.25 4.5h7.5L6 8.25Z' in rank_element.get_attribute('outerHTML'):
@@ -97,6 +103,24 @@ faixas_etarias = ["18 - 24", "25 - 34", "35 - 44", "45 - 54", "55 - 64", "65+"]
 print("Distribuição por idade: " + " ".join([f"({faixa}={porcentagem})" for faixa, porcentagem in zip(faixas_etarias, porcentagem_idade_text)]))
 
 
+# Armazenar dados no MongoDB
+dados_website = {
+    "titulo": title_text,
+    "classificacao_global": classificacao_global_text,
+    "categoria": categoria_text_sem_parenteses.strip(),
+    "mudanca_rank": [{"direcao": direcao, "valor": valor} for direcao, valor in zip(rank_directions, rank_texts)],
+    "total_visitas": total_text,
+    "duracao_media_visita": duracao_text,
+    "paginas_por_visita": pagina_text,
+    "taxa_rejeicao": taxa_text,
+    "principais_paises": [{"pais": pais, "porcentagem": porcentagem} for pais, porcentagem in zip(paises_text[:7], porcentagem_pais_text[:6])],
+    "distribuicao_genero": {"feminino": genero_feminino_text.split()[1], "masculino": genero_masculino_text.split()[1]},
+    "distribuicao_idade": {faixa: porcentagem for faixa, porcentagem in zip(faixas_etarias, porcentagem_idade_text)}
+}
 
+colecao.insert_one(dados_website)
+
+# Fechar o navegador e desconectar do MongoDB
 driver.quit()
+cliente.close()
 
