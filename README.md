@@ -23,7 +23,8 @@ python app.py
 ```
 Utilize ferramentas para testar a api como postman ou cURL e tenha o mongoDB instalado
 
-Crie uma nova workspace em modo HTTPO
+Crie uma nova workspace em modo HTTP
+
 ### Endpoints
 
  `POST /salve_info`:
