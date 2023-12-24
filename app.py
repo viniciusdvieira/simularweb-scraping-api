@@ -4,6 +4,7 @@ from selenium.webdriver.common.by import By
 from time import sleep
 import re
 from pymongo import MongoClient
+from threading import Thread
 
 app = Flask(__name__)
 
@@ -115,36 +116,60 @@ def extrair_dados_similarweb(url):
     
     return dados_website
 
+def processar_requisicao(url):
+    thread = Thread(target=extrair_dados_similarweb, args=(url,))
+    thread.start()
+    return {"id": str(thread.ident)}, 201
+
 # Rota para extrair e armazenar dados
 @app.route('/salve_info', methods=['POST'])
 def salve_info():
     try:
         data = request.get_json()
-        url = data.get('url')
+        if isinstance(data, list):
+            for item in data:
+                url = item.get('url')
+                if url:
+                    processar_requisicao(url)
+        else:
+            url = data.get('url')
+            if url:
+                processar_requisicao(url)
         if not url:
             raise ValueError("A URL não foi fornecida.")
 
-        extrair_dados_similarweb(url)
-        return jsonify({'success': True, 'message': 'Informações salvas no banco com sucesso.'})
+        id, status_code = processar_requisicao(url)
+        return jsonify({'success': True, 'message': 'Informações salvas no banco com sucesso.', 'id': id}), status_code
     except Exception as e:
         return jsonify({'success': False, 'error': str(e), 'message': 'Falha ao salvar as informações no banco.'})
-
+    
 # Rota para buscar informações do banco de dados
+def get_info_handler(url):
+    dados_website = colecao.find_one({'url': url})
+    if dados_website:
+        # Converter ObjectId para uma string antes de retornar JSON
+        dados_website['_id'] = str(dados_website['_id'])
+        return {'success': True, 'data': dados_website}
+    else:
+        return {'success': False, 'error': 'As informações não estão disponíveis no banco de dados.'}
+
+def get_info(urls):
+    if isinstance(urls, list):
+        results = [get_info_handler(url.get('url')) for url in urls if 'url' in url]
+        return results
+    else:
+        url = urls.get('url')
+        if url:
+            return get_info_handler(url)
+        else:
+            return {'success': False, 'error': 'A URL não foi fornecida.'}
+
 @app.route('/get_info', methods=['POST'])
-def get_info():
+def get_info_route():
     try:
         data = request.get_json()
-        url = data.get('url')
-        if not url:
-            raise ValueError("A URL não foi fornecida.")
-
-        dados_website = colecao.find_one({'url': url})
-        if dados_website:
-            # Converter ObjectId para uma string antes de retornar JSON
-            dados_website['_id'] = str(dados_website['_id'])
-            return jsonify({'success': True, 'data': dados_website})
-        else:
-            return jsonify({'success': False, 'error': 'As informações não estão disponíveis no banco de dados.'})
+        result = get_info(data)
+        return jsonify(result)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
