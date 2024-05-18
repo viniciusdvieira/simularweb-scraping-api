@@ -5,6 +5,7 @@ from selenium.webdriver.common.by import By
 import re
 from pymongo import MongoClient
 from aiohttp import ClientSession
+from selenium.webdriver.chrome.options import Options
 
 app = Flask(__name__)
 
@@ -13,7 +14,10 @@ banco_dados = cliente['dados_similarweb']
 colecao = banco_dados['dados_website']
 
 async def get_webdriver():
-    driver = webdriver.Chrome()
+    options = Options()
+    options.add_argument('--ignore-certificate-errors')
+    options.add_argument('--ignore-ssl-errors')
+    driver = webdriver.Chrome(options=options)
     return driver
 
 async def extrair_dados_similarweb(url, loop):
